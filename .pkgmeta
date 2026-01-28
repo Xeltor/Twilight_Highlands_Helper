@@ -1,1 +1,8 @@
 package-as: Twilight_Highlands_Helper
+
+ignore:
+  - .github
+  - README.md
+  - readme.md
+  - .gitignore
+  - .gitattributes
