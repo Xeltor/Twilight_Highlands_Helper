@@ -8,6 +8,13 @@
 * When an event rare dies, it **automatically advances** and sets your marker to the **next rare location** in the rotation
 * Nothing else: **no timers, no alerts, no loot lists, no big UI**—just “go here next”
 
+## Slash command
+
+* `/thh` (or `/thh toggle`) toggles the addon on/off
+* `/thh on` enables it
+* `/thh off` disables it
+* `/thh status` prints the current state
+
 ## Why it’s useful in Twilight Ascension
 
 Twilight Ascension rares are part of a repeatable ritual loop in Twilight Highlands, and **Two Minutes to Midnight** asks you to defeat all of the Twilight’s Blade summons—so staying on the rotation matters. This addon keeps the rare train smooth, especially when you’re chaining kills with friends.

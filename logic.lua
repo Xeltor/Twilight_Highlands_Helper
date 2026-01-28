@@ -208,6 +208,9 @@ function THH.SetMarkerIfChanged(mapID, x, y, title, key)
 end
 
 function THH.UpdateWaypointForZone()
+  if THH.IsEnabled and not THH.IsEnabled() then
+    return
+  end
   local mapID = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
   if mapID ~= THH.DEFAULT_MAP_ID then
     THH.RecordDecision("OUT_OF_ZONE", tostring(mapID))

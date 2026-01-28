@@ -5,6 +5,9 @@ THH.RARE_BY_VIGNETTE = {}
 
 function THH.InitDB()
   THH.DB = THH.DB or {}
+  if THH.DB.enabled == nil then
+    THH.DB.enabled = true
+  end
   THH.currentState = THH.DB.currentState
   -- Force a fresh marker set after reload; keep saved values in DB only.
   THH.lastMarkerKey = nil
@@ -20,4 +23,8 @@ function THH.InitDB()
       end
     end
   end
+end
+
+function THH.IsEnabled()
+  return THH.DB and THH.DB.enabled ~= false
 end
