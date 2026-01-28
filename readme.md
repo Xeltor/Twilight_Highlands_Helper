@@ -14,6 +14,7 @@
 * `/thh on` enables it
 * `/thh off` disables it
 * `/thh status` prints the current state
+* `/thh debug` prints the current waypoint reasoning and data sources
 
 ## Why it’s useful in Twilight Ascension
 

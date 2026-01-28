@@ -11,10 +11,92 @@ local function SendSystemMessage(message)
   print(message)
 end
 
+THH.SendSystemMessage = SendSystemMessage
+
 function THH.PrintStatus()
   local enabled = THH.IsEnabled and THH.IsEnabled()
   local stateLabel = enabled and "enabled" or "disabled"
   SendSystemMessage(("|cffffd200Twilight Highlands Helper|r is %s."):format(stateLabel))
+end
+
+local function BoolText(value)
+  if value == nil then return "n/a" end
+  return value and "true" or "false"
+end
+
+local function NumText(value, fmt)
+  if value == nil then return "n/a" end
+  if fmt then
+    return fmt:format(value)
+  end
+  return tostring(value)
+end
+
+local function TimeText(value)
+  if not value then return "n/a" end
+  return date("%Y-%m-%d %H:%M:%S", value)
+end
+
+function THH.PrintDebug()
+  local info = THH.lastDebug
+  if not info then
+    SendSystemMessage("|cffffd200Twilight Highlands Helper|r: no debug data yet.")
+    return
+  end
+
+  SendSystemMessage("|cffffd200Twilight Highlands Helper Debug|r")
+  SendSystemMessage(("Enabled: %s | State: %s | Reason: %s%s"):format(
+    BoolText(THH.IsEnabled and THH.IsEnabled()),
+    info.state or "n/a",
+    info.reason or "n/a",
+    info.detail and (" (" .. tostring(info.detail) .. ")") or ""
+  ))
+  SendSystemMessage(("MapID: %s | EventActive: %s | VisibleIndex: %s | VisibleDead: %s"):format(
+    NumText(info.mapID),
+    BoolText(info.eventActive),
+    NumText(info.visibleIndex),
+    BoolText(info.visibleDead)
+  ))
+  SendSystemMessage(("Source: %s | Current: %s @ %s | Next: %s | Target: %s"):format(
+    info.source or "n/a",
+    NumText(info.currentIndex),
+    TimeText(info.currentStart),
+    NumText(info.nextIndex),
+    NumText(info.targetIndex)
+  ))
+  if info.targetName or info.targetX or info.targetY then
+    SendSystemMessage(("Target Rare: %s @ %s, %s"):format(
+      info.targetName or "n/a",
+      NumText(info.targetX, "%.3f"),
+      NumText(info.targetY, "%.3f")
+    ))
+  end
+  if info.db then
+    local lastDet = info.db.lastDetection
+    if lastDet then
+      SendSystemMessage(("LastDetection: idx=%s source=%s dead=%s time=%s"):format(
+        NumText(lastDet.index),
+        lastDet.source or "n/a",
+        BoolText(lastDet.dead),
+        lastDet.time or TimeText(lastDet.serverTime)
+      ))
+    end
+    SendSystemMessage(("Anchors: lastSeen=%s @ %s | cycle=%s @ %s"):format(
+      NumText(info.db.lastSeenIndex),
+      TimeText(info.db.lastSeenTime),
+      NumText(info.db.cycleAnchorIndex),
+      TimeText(info.db.cycleAnchorStart)
+    ))
+    SendSystemMessage(("DB: nextIndex=%s | hasProgress=%s | activeVisible=%s"):format(
+      NumText(info.db.nextIndex),
+      BoolText(info.db.hasProgress),
+      NumText(info.db.activeVisibleIndex)
+    ))
+  end
+  SendSystemMessage(("LastMarkerKey: %s | DebugTime: %s"):format(
+    info.lastMarkerKey or "n/a",
+    info.time or "n/a"
+  ))
 end
 
 SLASH_THH1 = "/thh"
@@ -48,5 +130,9 @@ SlashCmdList["THH"] = function(msg)
     THH.PrintStatus()
     return
   end
-  SendSystemMessage("|cffffd200Twilight Highlands Helper|r: /thh [on|off|toggle|status]")
+  if command == "debug" then
+    THH.PrintDebug()
+    return
+  end
+  SendSystemMessage("|cffffd200Twilight Highlands Helper|r: /thh [on|off|toggle|status|debug]")
 end
