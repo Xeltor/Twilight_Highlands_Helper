@@ -1,0 +1,14 @@
+## Interface: 110207,120000,120001
+## Title: Twilight Highlands Helper
+## Notes: Adds TomTom or in-game waypoints for Twilight Highlands.
+## Author: Codex
+## Version: 0.1.0
+## OptionalDeps: TomTom
+
+core.lua
+data.lua
+db.lua
+waypoints.lua
+vignettes.lua
+logic.lua
+events.lua

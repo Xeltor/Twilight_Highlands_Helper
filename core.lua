@@ -1,0 +1,4 @@
+local ADDON_NAME, THH = ...
+THH = THH or {}
+
+THH.ADDON_NAME = ADDON_NAME
