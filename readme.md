@@ -1,15 +1,13 @@
 # Twilight Highlands Helper
 
-Twilight Highlands Helper is a simple companion for the Midnight pre‑patch event. It keeps you focused on the next rare in the Twilight’s Blade rotation so you can stay in the hunt instead of checking notes or timers.
+**Twilight Highlands Helper** is a lightweight waypoint companion for *Midnight*’s **Twilight Ascension** pre-patch event. Twilight’s Blade rares cycle on a regular **10-minute summoning rotation**, and this addon’s whole job is simple: **after you kill one, it points you to the next one**—so your group keeps moving without checking notes, guides, or timers.
 
-## What it feels like in game
-- You fly into Twilight Highlands and immediately get a clear marker for the next rare in the rotation.
-- When you kill that rare, the addon automatically points you to the next one.
-- It’s a steady “go here next” guide that’s perfect for farming the **Two Minutes to Midnight** achievement or just catching every spawn.
+## What it does
 
-## Why you’d use it
-- You don’t want to memorize the rotation.
-- You want a clean, always‑up‑to‑date target without bouncing between guides.
-- You’re chaining rares with friends and want everyone moving together.
+* Drops a **TomTom waypoint** (if you have TomTom) **or** uses the **built-in map pin system**
+* When an event rare dies, it **automatically advances** and sets your marker to the **next rare location** in the rotation
+* Nothing else: **no timers, no alerts, no loot lists, no big UI**—just “go here next”
 
-If you’re spending time in Twilight Highlands during the event, this addon keeps the hunt smooth and focused.
+## Why it’s useful in Twilight Ascension
+
+Twilight Ascension rares are part of a repeatable ritual loop in Twilight Highlands, and **Two Minutes to Midnight** asks you to defeat all of the Twilight’s Blade summons—so staying on the rotation matters. This addon keeps the rare train smooth, especially when you’re chaining kills with friends.
