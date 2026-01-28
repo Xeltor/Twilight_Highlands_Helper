@@ -6,6 +6,7 @@ THH.activeVisibleIndex = nil
 THH.visibleLostAt = nil
 THH.lastStateKey = nil
 THH.currentState = nil
+THH.lastDebug = nil
 
 local function GetPlayerDistanceYards(mapID, x, y)
   if not x or not y then return false end
@@ -72,8 +73,9 @@ local function ClearActiveMarker()
   end
 end
 
-function THH.RecordDecision(_, _)
-  return
+function THH.RecordDecision(code, detail)
+  THH.lastDecisionCode = code
+  THH.lastDecisionDetail = detail
 end
 
 local function AlignToIntervalAnchor(nowServer)
@@ -129,26 +131,39 @@ local function GetCycleCurrentIndex()
   return currentIndex, currentStart
 end
 
-local function IsEURegion()
+local function GetRegionTag()
   if type(GetCurrentRegionName) == "function" then
-    return GetCurrentRegionName() == "EU"
+    local name = GetCurrentRegionName()
+    if name == "US" or name == "EU" then
+      return name
+    end
+    return nil
   end
   if type(GetCurrentRegion) == "function" then
-    return GetCurrentRegion() == 3
+    local region = GetCurrentRegion()
+    if region == 1 then return "US" end
+    if region == 3 then return "EU" end
   end
-  return false
+  return nil
 end
 
 local function GetFallbackScheduleCurrentIndex()
-  if not IsEURegion() then
+  local region = GetRegionTag()
+  if region ~= "EU" and region ~= "US" then
     return nil
   end
   if not THH.FALLBACK_ANCHOR_INDEX or not THH.FALLBACK_ANCHOR_SERVER_EPOCH then
     return nil
   end
   local anchorIndex = THH.FALLBACK_ANCHOR_INDEX
-  local stepMinutes = (THH.SPAWN_INTERVAL_SECONDS or 600) / 60
   local cycle = #THH.RARE_SEQUENCE
+  if region == "US" then
+    local offset = THH.US_FALLBACK_INDEX_OFFSET or 0
+    if cycle > 0 then
+      anchorIndex = ((anchorIndex - 1 + offset) % cycle) + 1
+    end
+  end
+  local stepMinutes = (THH.SPAWN_INTERVAL_SECONDS or 600) / 60
   if cycle == 0 or stepMinutes <= 0 then
     return nil
   end
@@ -209,12 +224,68 @@ end
 
 function THH.UpdateWaypointForZone()
   if THH.IsEnabled and not THH.IsEnabled() then
+    THH.lastDebug = {
+      reason = "DISABLED",
+      detail = nil,
+      time = date("%Y-%m-%d %H:%M:%S"),
+      serverTime = GetServerTime(),
+      state = THH.currentState,
+      lastMarkerKey = THH.lastMarkerKey,
+      db = THH.DB,
+    }
     return
   end
+  local function SnapshotDB()
+    if not THH.DB then return nil end
+    return {
+      lastSeenIndex = THH.DB.lastSeenIndex,
+      lastSeenTime = THH.DB.lastSeenTime,
+      cycleAnchorIndex = THH.DB.cycleAnchorIndex,
+      cycleAnchorStart = THH.DB.cycleAnchorStart,
+      nextIndex = THH.DB.nextIndex,
+      hasProgress = THH.DB.hasProgress,
+      lastDetection = THH.DB.lastDetection,
+      currentState = THH.DB.currentState,
+      activeVisibleIndex = THH.DB.activeVisibleIndex,
+    }
+  end
+
+  local function CaptureDebug(reason, detail, snapshot)
+    snapshot = snapshot or {}
+    THH.lastDebug = {
+      reason = reason,
+      detail = detail,
+      time = date("%Y-%m-%d %H:%M:%S"),
+      serverTime = GetServerTime(),
+      mapID = snapshot.mapID,
+      eventActive = snapshot.eventActive,
+      visibleIndex = snapshot.visibleIndex,
+      visibleDead = snapshot.isDead,
+      scheduleCurrent = snapshot.scheduleCurrent,
+      timeBasedCurrent = snapshot.timeBasedCurrent,
+      fallbackCurrent = snapshot.fallbackCurrent,
+      currentIndex = snapshot.currentIndex,
+      currentStart = snapshot.currentStart,
+      nextIndex = snapshot.nextIndex,
+      targetIndex = snapshot.targetIndex,
+      withinGrace = snapshot.withinGrace,
+      withinPreGrace = snapshot.withinPreGrace,
+      source = snapshot.source,
+      targetName = snapshot.targetName,
+      targetX = snapshot.targetX,
+      targetY = snapshot.targetY,
+      state = THH.currentState,
+      lastMarkerKey = THH.lastMarkerKey,
+      db = SnapshotDB(),
+    }
+  end
+
   local mapID = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
   if mapID ~= THH.DEFAULT_MAP_ID then
     THH.RecordDecision("OUT_OF_ZONE", tostring(mapID))
     SetState("OUT_OF_ZONE")
+    CaptureDebug("OUT_OF_ZONE", tostring(mapID), { mapID = mapID })
+    THH.startHintShown = false
     if THH.lastMarkerKey then
       THH.ClearWaypoints()
       THH.lastMarkerKey = nil
@@ -233,6 +304,7 @@ function THH.UpdateWaypointForZone()
   if #THH.RARE_SEQUENCE == 0 then
     THH.RecordDecision("NO_DATA", "empty rare list")
     SetState("NO_DATA")
+    CaptureDebug("NO_DATA", "empty rare list", { mapID = mapID })
     return
   end
 
@@ -255,6 +327,16 @@ function THH.UpdateWaypointForZone()
     local rare = THH.RARE_SEQUENCE[visibleIndex]
     if isDead then
       SetState("VISIBLE_DEAD", tostring(visibleIndex))
+      CaptureDebug("VISIBLE_DEAD", tostring(visibleIndex), {
+        mapID = mapID,
+        eventActive = eventActive,
+        visibleIndex = visibleIndex,
+        isDead = isDead,
+        targetIndex = visibleIndex,
+        targetName = rare and rare.name,
+        targetX = rare and rare.x,
+        targetY = rare and rare.y,
+      })
     else
       local wx, wy = vx, vy
       if not wx or not wy then
@@ -264,10 +346,30 @@ function THH.UpdateWaypointForZone()
         if ShouldSuppressMarker(mapID, wx, wy) then
           THH.RecordDecision("NEAR_TARGET_VISIBLE", tostring(visibleIndex))
           SetState("NEAR_TARGET", tostring(visibleIndex))
+          CaptureDebug("NEAR_TARGET_VISIBLE", tostring(visibleIndex), {
+            mapID = mapID,
+            eventActive = eventActive,
+            visibleIndex = visibleIndex,
+            isDead = isDead,
+            targetIndex = visibleIndex,
+            targetName = rare and rare.name,
+            targetX = wx,
+            targetY = wy,
+          })
           ClearActiveMarker()
           return
         end
         THH.SetMarkerIfChanged(mapID, wx, wy, rare and rare.name or "Visible Rare", "visible:" .. visibleIndex)
+        CaptureDebug("VISIBLE", tostring(visibleIndex), {
+          mapID = mapID,
+          eventActive = eventActive,
+          visibleIndex = visibleIndex,
+          isDead = isDead,
+          targetIndex = visibleIndex,
+          targetName = rare and rare.name,
+          targetX = wx,
+          targetY = wy,
+        })
       end
       return
     end
@@ -295,6 +397,12 @@ function THH.UpdateWaypointForZone()
 
     if not THH.visibleLostAt then
       THH.visibleLostAt = GetTime()
+      CaptureDebug("VISIBLE_LOST_HOLD", tostring(THH.activeVisibleIndex), {
+        mapID = mapID,
+        eventActive = eventActive,
+        visibleIndex = THH.activeVisibleIndex,
+        isDead = isDead,
+      })
       return
     end
 
@@ -303,9 +411,16 @@ function THH.UpdateWaypointForZone()
       if eventActive then
         SetState("EVENT_ACTIVE")
       end
+      CaptureDebug("VISIBLE_LOST_HOLD", tostring(THH.activeVisibleIndex), {
+        mapID = mapID,
+        eventActive = eventActive,
+        visibleIndex = THH.activeVisibleIndex,
+        isDead = isDead,
+      })
       return
     end
 
+    local lostIndex = THH.activeVisibleIndex
     if THH.DB and THH.DB.nextIndex and THH.activeVisibleIndex == THH.DB.nextIndex then
       local nextIndex = THH.DB.nextIndex + 1
       if nextIndex > #THH.RARE_SEQUENCE then
@@ -320,6 +435,12 @@ function THH.UpdateWaypointForZone()
       THH.DB.activeVisibleIndex = nil
     end
     THH.visibleLostAt = nil
+    CaptureDebug("VISIBLE_LOST_CLEAR", tostring(lostIndex), {
+      mapID = mapID,
+      eventActive = eventActive,
+      visibleIndex = lostIndex,
+      isDead = isDead,
+    })
   end
 
   local scheduleCurrent, scheduleStart = GetCycleCurrentIndex()
@@ -327,9 +448,26 @@ function THH.UpdateWaypointForZone()
   local fallbackCurrent, fallbackStart = (scheduleCurrent or timeBasedCurrent) and nil or GetFallbackScheduleCurrentIndex()
   local currentIndex = scheduleCurrent or timeBasedCurrent or fallbackCurrent
   local currentStart = scheduleStart or timeBasedStart or fallbackStart
+  local source = scheduleCurrent and "schedule" or (timeBasedCurrent and "lastSeen" or (fallbackCurrent and "fallback" or "none"))
   if not currentIndex then
     THH.RecordDecision("NO_NEXT", "no anchor, recent seen, or fallback")
     SetState("WAITING")
+    CaptureDebug("NO_NEXT", "no anchor, recent seen, or fallback", {
+      mapID = mapID,
+      eventActive = eventActive,
+      visibleIndex = visibleIndex,
+      isDead = isDead,
+      scheduleCurrent = scheduleCurrent,
+      timeBasedCurrent = timeBasedCurrent,
+      fallbackCurrent = fallbackCurrent,
+      currentIndex = currentIndex,
+      currentStart = currentStart,
+      source = source,
+    })
+    if not THH.startHintShown and THH.SendSystemMessage then
+      THH.startHintShown = true
+      THH.SendSystemMessage("|cffffd200Twilight Highlands Helper|r: No detections yet. Find or kill any event rare to start the rotation.")
+    end
     return
   end
   local nextIndex = currentIndex + 1
@@ -359,6 +497,22 @@ function THH.UpdateWaypointForZone()
   if not targetRare then
     THH.RecordDecision("INVALID_NEXT", tostring(targetIndex))
     SetState("INVALID_NEXT", tostring(targetIndex))
+    CaptureDebug("INVALID_NEXT", tostring(targetIndex), {
+      mapID = mapID,
+      eventActive = eventActive,
+      visibleIndex = visibleIndex,
+      isDead = isDead,
+      scheduleCurrent = scheduleCurrent,
+      timeBasedCurrent = timeBasedCurrent,
+      fallbackCurrent = fallbackCurrent,
+      currentIndex = currentIndex,
+      currentStart = currentStart,
+      nextIndex = nextIndex,
+      targetIndex = targetIndex,
+      withinGrace = withinGrace,
+      withinPreGrace = withinPreGrace,
+      source = source,
+    })
     return
   end
   if targetIndex == currentIndex then
@@ -377,9 +531,48 @@ function THH.UpdateWaypointForZone()
   if ShouldSuppressMarker(mapID, targetRare.x, targetRare.y) then
     THH.RecordDecision("NEAR_TARGET_NEXT", tostring(targetIndex))
     SetState("NEAR_TARGET", tostring(targetIndex))
+    CaptureDebug("NEAR_TARGET_NEXT", tostring(targetIndex), {
+      mapID = mapID,
+      eventActive = eventActive,
+      visibleIndex = visibleIndex,
+      isDead = isDead,
+      scheduleCurrent = scheduleCurrent,
+      timeBasedCurrent = timeBasedCurrent,
+      fallbackCurrent = fallbackCurrent,
+      currentIndex = currentIndex,
+      currentStart = currentStart,
+      nextIndex = nextIndex,
+      targetIndex = targetIndex,
+      withinGrace = withinGrace,
+      withinPreGrace = withinPreGrace,
+      source = source,
+      targetName = targetRare.name,
+      targetX = targetRare.x,
+      targetY = targetRare.y,
+    })
     ClearActiveMarker()
     return
   end
   THH.SetMarkerIfChanged(mapID, targetRare.x, targetRare.y, targetRare.name, stateKey)
-  THH.RecordDecision((targetIndex == currentIndex) and "SET_CURRENT" or "SET_NEXT", tostring(targetIndex))
+  local decision = (targetIndex == currentIndex) and "SET_CURRENT" or "SET_NEXT"
+  THH.RecordDecision(decision, tostring(targetIndex))
+  CaptureDebug(decision, tostring(targetIndex), {
+    mapID = mapID,
+    eventActive = eventActive,
+    visibleIndex = visibleIndex,
+    isDead = isDead,
+    scheduleCurrent = scheduleCurrent,
+    timeBasedCurrent = timeBasedCurrent,
+    fallbackCurrent = fallbackCurrent,
+    currentIndex = currentIndex,
+    currentStart = currentStart,
+    nextIndex = nextIndex,
+    targetIndex = targetIndex,
+    withinGrace = withinGrace,
+    withinPreGrace = withinPreGrace,
+    source = source,
+    targetName = targetRare.name,
+    targetX = targetRare.x,
+    targetY = targetRare.y,
+  })
 end

@@ -15,6 +15,8 @@ THH.NEAR_SHOW_YARDS = 100
 -- Server time anchor: 2026-01-28 17:30 (EU realm time), Asira Dawnslayer.
 THH.FALLBACK_ANCHOR_INDEX = 11
 THH.FALLBACK_ANCHOR_SERVER_EPOCH = 1769617800
+-- US realms are offset by 6 in the same rotation.
+THH.US_FALLBACK_INDEX_OFFSET = 6
 
 THH.RARE_SEQUENCE = {
   { name = "Redeye the Skullchewer", npc = 246572, vignette = 7007, map = 241, x = 0.650, y = 0.526 },
