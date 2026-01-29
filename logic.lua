@@ -27,13 +27,6 @@ local function GetPlayerDistanceYards(mapID, x, y)
   return math.sqrt(dx * dx + dy * dy)
 end
 
-local function IsPlayerNear(mapID, x, y, yards)
-  local dist = GetPlayerDistanceYards(mapID, x, y)
-  if not dist then return false end
-  if dist == true then return false end
-  return dist <= yards
-end
-
 local function ShouldSuppressMarker(mapID, x, y)
   local hideAt = THH.NEAR_HIDE_YARDS or 25
   local showAt = THH.NEAR_SHOW_YARDS or 100
@@ -97,13 +90,6 @@ function THH.RecordDetection(index, source, isDead)
   THH.DB.lastSeenTime = nowServer
   THH.DB.cycleAnchorIndex = index
   THH.DB.cycleAnchorStart = alignedStart
-end
-
-local function UpdateCycleAnchor(index, detectedAt)
-  if not THH.DB then return end
-  local nowServer = detectedAt or GetServerTime()
-  THH.DB.cycleAnchorIndex = index
-  THH.DB.cycleAnchorStart = AlignToIntervalAnchor(nowServer)
 end
 
 local function GetCycleCurrentIndex()
