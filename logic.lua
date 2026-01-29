@@ -269,7 +269,6 @@ function THH.UpdateWaypointForZone()
       nextIndex = snapshot.nextIndex,
       targetIndex = snapshot.targetIndex,
       withinGrace = snapshot.withinGrace,
-      withinPreGrace = snapshot.withinPreGrace,
       source = snapshot.source,
       targetName = snapshot.targetName,
       targetX = snapshot.targetX,
@@ -484,11 +483,8 @@ function THH.UpdateWaypointForZone()
     eventActiveEffective = false
   end
 
-  local preGrace = THH.PRE_SPAWN_GRACE_SECONDS or 0
-  local withinPreGrace = currentStart and (nowServer < currentStart) and ((currentStart - nowServer) <= preGrace)
-
   local targetIndex
-  if eventActiveEffective or withinPreGrace then
+  if eventActiveEffective then
     targetIndex = currentIndex
   else
     targetIndex = nextIndex
@@ -510,7 +506,6 @@ function THH.UpdateWaypointForZone()
       nextIndex = nextIndex,
       targetIndex = targetIndex,
       withinGrace = withinGrace,
-      withinPreGrace = withinPreGrace,
       source = source,
     })
     return
@@ -544,7 +539,6 @@ function THH.UpdateWaypointForZone()
       nextIndex = nextIndex,
       targetIndex = targetIndex,
       withinGrace = withinGrace,
-      withinPreGrace = withinPreGrace,
       source = source,
       targetName = targetRare.name,
       targetX = targetRare.x,
@@ -569,7 +563,6 @@ function THH.UpdateWaypointForZone()
     nextIndex = nextIndex,
     targetIndex = targetIndex,
     withinGrace = withinGrace,
-    withinPreGrace = withinPreGrace,
     source = source,
     targetName = targetRare.name,
     targetX = targetRare.x,

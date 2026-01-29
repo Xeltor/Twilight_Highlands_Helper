@@ -1,6 +1,6 @@
 # Twilight Highlands Helper
 
-**Twilight Highlands Helper** is a lightweight waypoint companion for *Midnight*’s **Twilight Ascension** pre-patch event. Twilight’s Blade rares cycle on a regular **10-minute summoning rotation**, and this addon’s whole job is simple: **after you kill one, it points you to the next one**—so your group keeps moving without checking notes, guides, or timers.
+**Twilight Highlands Helper** is a lightweight waypoint companion for *Midnight*’s **Twilight Ascension** pre-patch event. Twilight’s Blade rares cycle on a regular **5-minute summoning rotation**, and this addon’s whole job is simple: **after you kill one, it points you to the next one**—so your group keeps moving without checking notes, guides, or timers.
 
 ## What it does
 

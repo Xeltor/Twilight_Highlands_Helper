@@ -1,20 +1,16 @@
 local _, THH = ...
 
 THH.DEFAULT_MAP_ID = 241 -- Twilight Highlands
-THH.SPAWN_INTERVAL_SECONDS = 600
--- No staleness: keep using last pure detection indefinitely.
-THH.STALE_STATE_SECONDS = nil
+THH.SPAWN_INTERVAL_SECONDS = 300
 -- Grace window after interval start to avoid pointing at next before event appears.
-THH.EVENT_START_GRACE_SECONDS = 90
--- If we're within this window before the scheduled start, keep pointing to current.
-THH.PRE_SPAWN_GRACE_SECONDS = 60
+THH.EVENT_START_GRACE_SECONDS = 60
 -- Hysteresis for waypoint visibility.
 THH.NEAR_HIDE_YARDS = 50
 THH.NEAR_SHOW_YARDS = 100
 -- Fallback schedule anchor when no detections are available.
--- Server time anchor: 2026-01-28 17:30 (EU realm time), Asira Dawnslayer.
-THH.FALLBACK_ANCHOR_INDEX = 11
-THH.FALLBACK_ANCHOR_SERVER_EPOCH = 1769617800
+-- Server time anchor: 2026-01-29 09:10 (EU realm time), Ix the Bloodfallen.
+THH.FALLBACK_ANCHOR_INDEX = 4
+THH.FALLBACK_ANCHOR_SERVER_EPOCH = 1769674200
 -- US realms are offset by 6 in the same rotation.
 THH.US_FALLBACK_INDEX_OFFSET = 6
 
