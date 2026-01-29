@@ -342,6 +342,44 @@ function THH.UpdateWaypointForZone()
     end
   end
 
+  local specialRare, sx, sy, specialDead = THH.FindVisibleSpecialRare(mapID)
+  if specialRare and not visibleIndex then
+    THH.RecordDecision("SPECIAL_VISIBLE", specialRare.name or "unknown")
+    SetState("SPECIAL_VISIBLE", specialRare.name)
+    THH.activeVisibleIndex = nil
+    if THH.DB then
+      THH.DB.activeVisibleIndex = nil
+    end
+    THH.visibleLostAt = nil
+    if specialDead then
+      CaptureDebug("SPECIAL_DEAD", specialRare.name or "unknown", {
+        mapID = mapID,
+        eventActive = eventActive,
+        targetName = specialRare.name,
+        targetX = sx,
+        targetY = sy,
+      })
+      return
+    end
+    if sx and sy then
+      THH.SetMarkerIfChanged(mapID, sx, sy, specialRare.name, "special:" .. (specialRare.npc or specialRare.vignette or "unknown"))
+      CaptureDebug("SPECIAL_VISIBLE", specialRare.name or "unknown", {
+        mapID = mapID,
+        eventActive = eventActive,
+        targetName = specialRare.name,
+        targetX = sx,
+        targetY = sy,
+      })
+    else
+      CaptureDebug("SPECIAL_NO_POSITION", specialRare.name or "unknown", {
+        mapID = mapID,
+        eventActive = eventActive,
+        targetName = specialRare.name,
+      })
+    end
+    return
+  end
+
   if THH.activeVisibleIndex then
     if isDead then
       if THH.DB and THH.DB.nextIndex and THH.activeVisibleIndex == THH.DB.nextIndex then

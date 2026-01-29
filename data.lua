@@ -29,3 +29,7 @@ THH.RARE_SEQUENCE = {
   { name = "Mirrorvise", npc = 246566, vignette = 7006, map = 241, x = 0.452, y = 0.490 },
   { name = "Saligrum the Observer", npc = 246558, vignette = 7003, map = 241, x = 0.426, y = 0.176 },
 }
+
+THH.SPECIAL_RARES = {
+  { name = "Voice of the Eclipse", npc = 253378, vignette = 7340, map = 241 },
+}

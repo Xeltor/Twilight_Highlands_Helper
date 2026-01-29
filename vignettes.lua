@@ -50,6 +50,35 @@ function THH.FindRareIndexByVignette(vignetteId)
   return THH.RARE_BY_VIGNETTE[vignetteId]
 end
 
+local function GetVignetteXY(vignetteGUID, mapID)
+  if not C_VignetteInfo or not C_VignetteInfo.GetVignettePosition then
+    return nil
+  end
+  local pos, yOrFacing = C_VignetteInfo.GetVignettePosition(vignetteGUID, mapID)
+  if not pos then return nil end
+  if type(pos) == "table" and pos.GetXY then
+    return pos:GetXY()
+  end
+  if type(pos) == "number" then
+    return pos, yOrFacing
+  end
+  return nil
+end
+
+function THH.FindSpecialRareByVignette(vignetteId)
+  if not vignetteId then return nil end
+  local idx = THH.SPECIAL_BY_VIGNETTE and THH.SPECIAL_BY_VIGNETTE[vignetteId]
+  if not idx then return nil end
+  return THH.SPECIAL_RARES and THH.SPECIAL_RARES[idx]
+end
+
+function THH.FindSpecialRareByNpc(npcId)
+  if not npcId then return nil end
+  local idx = THH.SPECIAL_BY_NPC and THH.SPECIAL_BY_NPC[npcId]
+  if not idx then return nil end
+  return THH.SPECIAL_RARES and THH.SPECIAL_RARES[idx]
+end
+
 function THH.FindVisibleRare(mapID)
   if not C_VignetteInfo or not C_VignetteInfo.GetVignettes then
     return nil
@@ -73,7 +102,7 @@ function THH.FindVisibleRare(mapID)
         if info.isDead then
           deadIndex = index
         end
-        local x, y = C_VignetteInfo.GetVignettePosition(vignetteGUID, mapID)
+        local x, y = GetVignetteXY(vignetteGUID, mapID)
         if x and y then
           if playerX and playerY then
             local dx = x - playerX
@@ -112,6 +141,58 @@ function THH.GetVisibleRareIndex(mapID)
   if visibleIndex then
     return visibleIndex, vx, vy, isDead
   end
+  return nil
+end
+
+function THH.FindVisibleSpecialRare(mapID)
+  if not C_VignetteInfo or not C_VignetteInfo.GetVignettes then
+    return nil
+  end
+  if not THH.SPECIAL_RARES or not next(THH.SPECIAL_RARES) then
+    return nil
+  end
+
+  local playerX, playerY = THH.GetPlayerMapPosition(mapID)
+  local bestRare, bestX, bestY
+  local bestDist
+
+  local vignettes = C_VignetteInfo.GetVignettes()
+  for _, vignetteGUID in ipairs(vignettes) do
+    local info = C_VignetteInfo.GetVignetteInfo(vignetteGUID)
+    if info then
+      local npcId = THH.GetNpcIdFromGUID(info.objectGUID)
+      local rare = THH.FindSpecialRareByVignette(info.vignetteID) or THH.FindSpecialRareByNpc(npcId)
+      if rare and (not rare.map or rare.map == mapID) then
+        if info.isDead then
+          return rare, nil, nil, true
+        end
+        local x, y = GetVignetteXY(vignetteGUID, mapID)
+        if x and y then
+          if playerX and playerY then
+            local dx = x - playerX
+            local dy = y - playerY
+            local dist = dx * dx + dy * dy
+            if not bestDist or dist < bestDist then
+              bestDist = dist
+              bestRare, bestX, bestY = rare, x, y
+            end
+          else
+            bestRare, bestX, bestY = rare, x, y
+            break
+          end
+        else
+          if not bestRare then
+            bestRare = rare
+          end
+        end
+      end
+    end
+  end
+
+  if bestRare then
+    return bestRare, bestX, bestY, false
+  end
+
   return nil
 end
 
