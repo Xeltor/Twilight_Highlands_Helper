@@ -56,12 +56,11 @@ function THH.PrintDebug()
     info.time or "n/a",
     TimeText(info.nowServer or info.serverTime)
   ))
-  SendSystemMessage(("Event: active=%s effective=%s | Visible: idx=%s dead=%s lostTick=%s"):format(
+  SendSystemMessage(("Event: active=%s effective=%s | Visible: idx=%s dead=%s"):format(
     BoolText(info.eventActive),
     BoolText(info.eventActiveEffective),
     NumText(info.visibleIndex),
-    BoolText(info.visibleDead),
-    BoolText(info.visibleLostThisTick)
+    BoolText(info.visibleDead)
   ))
   SendSystemMessage(("Rotation: source=%s | current=%s @ %s | next=%s | target=%s | grace=%s"):format(
     info.source or "n/a",

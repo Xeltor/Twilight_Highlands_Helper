@@ -3,8 +3,6 @@ local _, THH = ...
 THH.lastDebugTick = nil
 THH.lastMarkerKey = nil
 THH.activeVisibleIndex = nil
-THH.visibleLostAt = nil
-THH.ignoreEventActiveUntil = nil
 THH.recentEndedIndex = nil
 THH.lastStateKey = nil
 THH.currentState = nil
@@ -124,26 +122,6 @@ local function GetCycleCurrentIndex()
   return currentIndex, currentStart
 end
 
-local function GetRegionTag()
-  if type(GetCurrentRegionName) == "function" then
-    local name = GetCurrentRegionName()
-    if name == "US" or name == "EU" then
-      return name
-    end
-    return nil
-  end
-  if type(GetCurrentRegion) == "function" then
-    local region = GetCurrentRegion()
-    if region == 1 then return "US" end
-    if region == 3 then return "EU" end
-  end
-  return nil
-end
-
-local function GetFallbackScheduleCurrentIndex()
-  return nil
-end
-
 local function GetTimeSinceSeenNextIndex()
   if not THH.DB then return nil end
   local lastIndex = THH.DB.lastSeenIndex
@@ -158,6 +136,18 @@ local function GetTimeSinceSeenNextIndex()
   local currentIndex = ((lastIndex - 1 + steps) % cycle) + 1
   local currentStart = lastTime + (steps * interval)
   return currentIndex, currentStart
+end
+
+local function GetCurrentRotationAnchor()
+  local scheduleCurrent, scheduleStart = GetCycleCurrentIndex()
+  if scheduleCurrent then
+    return scheduleCurrent, scheduleStart, "schedule"
+  end
+  local timeBasedCurrent, timeBasedStart = GetTimeSinceSeenNextIndex()
+  if timeBasedCurrent then
+    return timeBasedCurrent, timeBasedStart, "lastSeen"
+  end
+  return nil, nil, "none"
 end
 
 function THH.SetMarkerIfChanged(mapID, x, y, title, key)
@@ -225,10 +215,6 @@ function THH.UpdateWaypointForZone()
       eventActiveEffective = snapshot.eventActiveEffective,
       visibleIndex = snapshot.visibleIndex,
       visibleDead = snapshot.isDead,
-      visibleLostThisTick = snapshot.visibleLostThisTick,
-      scheduleCurrent = snapshot.scheduleCurrent,
-      timeBasedCurrent = snapshot.timeBasedCurrent,
-      fallbackCurrent = snapshot.fallbackCurrent,
       currentIndex = snapshot.currentIndex,
       currentStart = snapshot.currentStart,
       nextIndex = snapshot.nextIndex,
@@ -261,7 +247,6 @@ function THH.UpdateWaypointForZone()
       if THH.DB then
         THH.DB.activeVisibleIndex = nil
       end
-      THH.visibleLostAt = nil
     end
     return
   end
@@ -276,7 +261,6 @@ function THH.UpdateWaypointForZone()
   local eventActive = THH.IsEventActiveNearby(mapID)
 
   local visibleIndex, vx, vy, isDead = THH.GetVisibleRareIndex(mapID)
-  local visibleLostThisTick = false
   if visibleIndex then
     THH.recentEndedIndex = nil
     THH.RecordDecision("VISIBLE", tostring(visibleIndex))
@@ -286,7 +270,6 @@ function THH.UpdateWaypointForZone()
       THH.DB.activeVisibleIndex = visibleIndex
     end
     THH.RecordDetection(visibleIndex, "vignette", isDead)
-    THH.visibleLostAt = nil
     if THH.DB then
       THH.DB.nextIndex = visibleIndex
       THH.DB.hasProgress = true
@@ -350,7 +333,6 @@ function THH.UpdateWaypointForZone()
     if THH.DB then
       THH.DB.activeVisibleIndex = nil
     end
-    THH.visibleLostAt = nil
     if specialDead then
       CaptureDebug("SPECIAL_DEAD", specialRare.name or "unknown", {
         mapID = mapID,
@@ -397,7 +379,6 @@ function THH.UpdateWaypointForZone()
       if THH.DB then
         THH.DB.activeVisibleIndex = nil
       end
-      THH.visibleLostAt = nil
     end
 
     local lostIndex = THH.activeVisibleIndex
@@ -414,9 +395,7 @@ function THH.UpdateWaypointForZone()
     if THH.DB then
       THH.DB.activeVisibleIndex = nil
     end
-    THH.visibleLostAt = nil
     THH.recentEndedIndex = lostIndex
-    visibleLostThisTick = true
     CaptureDebug("VISIBLE_LOST_CLEAR", tostring(lostIndex), {
       mapID = mapID,
       eventActive = eventActive,
@@ -425,28 +404,21 @@ function THH.UpdateWaypointForZone()
     })
   end
 
-  local scheduleCurrent, scheduleStart = GetCycleCurrentIndex()
-  local timeBasedCurrent, timeBasedStart = scheduleCurrent and nil or GetTimeSinceSeenNextIndex()
-  local fallbackCurrent, fallbackStart = (scheduleCurrent or timeBasedCurrent) and nil or GetFallbackScheduleCurrentIndex()
-  local currentIndex = scheduleCurrent or timeBasedCurrent or fallbackCurrent
-  local currentStart = scheduleStart or timeBasedStart or fallbackStart
-  local source = scheduleCurrent and "schedule" or (timeBasedCurrent and "lastSeen" or (fallbackCurrent and "fallback" or "none"))
+  local currentIndex, currentStart, source = GetCurrentRotationAnchor()
   if not currentIndex then
-    THH.RecordDecision("NO_NEXT", "no anchor, recent seen, or fallback")
+    THH.RecordDecision("NO_NEXT", "no anchor or recent seen")
     SetState("WAITING")
-    CaptureDebug("NO_NEXT", "no anchor, recent seen, or fallback", {
+    CaptureDebug("NO_NEXT", "no anchor or recent seen", {
       mapID = mapID,
       eventActive = eventActive,
       visibleIndex = visibleIndex,
       isDead = isDead,
       scheduleCurrent = scheduleCurrent,
       timeBasedCurrent = timeBasedCurrent,
-      fallbackCurrent = fallbackCurrent,
       currentIndex = currentIndex,
       currentStart = currentStart,
       source = source,
       nowServer = GetServerTime(),
-      visibleLostThisTick = visibleLostThisTick,
       recentEndedIndex = THH.recentEndedIndex,
     })
     if not THH.startHintShown and THH.SendSystemMessage then
@@ -462,26 +434,19 @@ function THH.UpdateWaypointForZone()
 
   local graceSeconds = THH.EVENT_START_GRACE_SECONDS or 0
   local nowServer = GetServerTime()
-  local withinGrace = (not visibleIndex) and currentStart and (nowServer - currentStart) <= graceSeconds
-  if visibleLostThisTick then
-    withinGrace = false
+  local withinGrace = currentStart and (nowServer - currentStart) <= graceSeconds
+  local useCurrent = eventActive and withinGrace
+  if THH.recentEndedIndex and currentIndex == THH.recentEndedIndex then
+    useCurrent = false
   end
-
-  local eventActiveEffective = eventActive
-  if eventActive and not visibleIndex and not withinGrace then
-    eventActiveEffective = false
-  end
-  if visibleLostThisTick then
-    eventActiveEffective = false
-  end
-  if THH.recentEndedIndex and not visibleIndex and eventActiveEffective then
-    if currentIndex == THH.recentEndedIndex then
-      eventActiveEffective = false
-    end
+  local lastDet = THH.DB and THH.DB.lastDetection
+  if lastDet and currentIndex and lastDet.index == currentIndex then
+    -- If we've already detected this event's vignette, don't keep pointing at it after it disappears.
+    useCurrent = false
   end
 
   local targetIndex
-  if eventActiveEffective then
+  if useCurrent then
     targetIndex = currentIndex
   else
     targetIndex = nextIndex
@@ -497,7 +462,6 @@ function THH.UpdateWaypointForZone()
       isDead = isDead,
       scheduleCurrent = scheduleCurrent,
       timeBasedCurrent = timeBasedCurrent,
-      fallbackCurrent = fallbackCurrent,
       currentIndex = currentIndex,
       currentStart = currentStart,
       nextIndex = nextIndex,
@@ -513,7 +477,7 @@ function THH.UpdateWaypointForZone()
     SetState("NEXT", tostring(targetIndex))
   end
   local stateKey = ((targetIndex == currentIndex) and "current:" or "next:") .. targetIndex
-  if THH.DB and (scheduleCurrent or timeBasedCurrent or fallbackCurrent) then
+  if THH.DB and currentIndex then
     THH.DB.nextIndex = targetIndex
     THH.DB.hasProgress = true
   end
@@ -528,9 +492,6 @@ function THH.UpdateWaypointForZone()
       eventActive = eventActive,
       visibleIndex = visibleIndex,
       isDead = isDead,
-      scheduleCurrent = scheduleCurrent,
-      timeBasedCurrent = timeBasedCurrent,
-      fallbackCurrent = fallbackCurrent,
       currentIndex = currentIndex,
       currentStart = currentStart,
       nextIndex = nextIndex,
@@ -552,9 +513,6 @@ function THH.UpdateWaypointForZone()
     eventActive = eventActive,
     visibleIndex = visibleIndex,
     isDead = isDead,
-    scheduleCurrent = scheduleCurrent,
-    timeBasedCurrent = timeBasedCurrent,
-    fallbackCurrent = fallbackCurrent,
     currentIndex = currentIndex,
     currentStart = currentStart,
     nextIndex = nextIndex,
@@ -562,8 +520,7 @@ function THH.UpdateWaypointForZone()
     withinGrace = withinGrace,
     source = source,
     nowServer = nowServer,
-    eventActiveEffective = eventActiveEffective,
-    visibleLostThisTick = visibleLostThisTick,
+    eventActiveEffective = useCurrent,
     recentEndedIndex = THH.recentEndedIndex,
     targetName = targetRare.name,
     targetX = targetRare.x,
