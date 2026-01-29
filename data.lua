@@ -7,12 +7,7 @@ THH.EVENT_START_GRACE_SECONDS = 60
 -- Hysteresis for waypoint visibility.
 THH.NEAR_HIDE_YARDS = 50
 THH.NEAR_SHOW_YARDS = 100
--- Fallback schedule anchor when no detections are available.
--- Server time anchor: 2026-01-29 09:10 (EU realm time), Ix the Bloodfallen.
-THH.FALLBACK_ANCHOR_INDEX = 4
-THH.FALLBACK_ANCHOR_SERVER_EPOCH = 1769674200
--- US realms are offset by 6 in the same rotation.
-THH.US_FALLBACK_INDEX_OFFSET = 6
+-- Fallback schedule anchor disabled (using detections only).
 
 THH.RARE_SEQUENCE = {
   { name = "Redeye the Skullchewer", npc = 246572, vignette = 7007, map = 241, x = 0.650, y = 0.526 },

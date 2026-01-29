@@ -51,21 +51,31 @@ function THH.PrintDebug()
     info.reason or "n/a",
     info.detail and (" (" .. tostring(info.detail) .. ")") or ""
   ))
-  SendSystemMessage(("MapID: %s | EventActive: %s | VisibleIndex: %s | VisibleDead: %s"):format(
+  SendSystemMessage(("MapID: %s | Time: %s | NowServer: %s"):format(
     NumText(info.mapID),
-    BoolText(info.eventActive),
-    NumText(info.visibleIndex),
-    BoolText(info.visibleDead)
+    info.time or "n/a",
+    TimeText(info.nowServer or info.serverTime)
   ))
-  SendSystemMessage(("Source: %s | Current: %s @ %s | Next: %s | Target: %s"):format(
+  SendSystemMessage(("Event: active=%s effective=%s | Visible: idx=%s dead=%s lostTick=%s"):format(
+    BoolText(info.eventActive),
+    BoolText(info.eventActiveEffective),
+    NumText(info.visibleIndex),
+    BoolText(info.visibleDead),
+    BoolText(info.visibleLostThisTick)
+  ))
+  SendSystemMessage(("Rotation: source=%s | current=%s @ %s | next=%s | target=%s | grace=%s"):format(
     info.source or "n/a",
     NumText(info.currentIndex),
     TimeText(info.currentStart),
     NumText(info.nextIndex),
-    NumText(info.targetIndex)
+    NumText(info.targetIndex),
+    BoolText(info.withinGrace)
+  ))
+  SendSystemMessage(("Guards: recentEndedIndex=%s"):format(
+    NumText(info.recentEndedIndex)
   ))
   if info.targetName or info.targetX or info.targetY then
-    SendSystemMessage(("Target Rare: %s @ %s, %s"):format(
+    SendSystemMessage(("Target: %s @ %s, %s"):format(
       info.targetName or "n/a",
       NumText(info.targetX, "%.3f"),
       NumText(info.targetY, "%.3f")
