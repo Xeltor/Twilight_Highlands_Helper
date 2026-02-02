@@ -159,7 +159,7 @@ function THH.FindVisibleSpecialRare(mapID)
     if info then
       local npcId = THH.GetNpcIdFromGUID(info.objectGUID)
       local rare = THH.FindSpecialRareByVignette(info.vignetteID) or THH.FindSpecialRareByNpc(npcId)
-      if rare and (not rare.map or rare.map == mapID) then
+      if rare then
         if info.isDead then
           return rare, nil, nil, true
         end
