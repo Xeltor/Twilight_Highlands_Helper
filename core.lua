@@ -30,7 +30,12 @@ local function CanSendToChannel(channel)
 end
 
 local function IsChatLocked()
-  return C_ChatInfo and C_ChatInfo.InChatMessagingLockdown and C_ChatInfo.InChatMessagingLockdown()
+  if not (C_ChatInfo and C_ChatInfo.InChatMessagingLockdown) then
+    return false
+  end
+  local locked, reason = C_ChatInfo.InChatMessagingLockdown()
+  THH.lastChatLockdownReason = reason
+  return locked
 end
 
 function THH.ProcessAnnounceQueue()
@@ -108,6 +113,29 @@ function THH.MaybeAnnounce(key, message, mapID, x, y)
     end
   end
   THH.Announce(message)
+end
+
+local function ShouldAnnounce(kind)
+  if not THH.DB then return false end
+  if kind == "NEXT" then
+    return THH.DB.announceNext
+  end
+  if kind == "ACTIVE" then
+    return THH.DB.announceActive
+  end
+  return false
+end
+
+local function FormatAnnounceMessage(kind, name)
+  local label = (kind == "NEXT") and "Next" or "Active"
+  return ("%s: %s"):format(label, name or "Unknown")
+end
+
+function THH.AnnounceEvent(kind, key, name, mapID, x, y)
+  if not kind or not key then return end
+  if not ShouldAnnounce(kind) then return end
+  local message = FormatAnnounceMessage(kind, name)
+  THH.MaybeAnnounce(key, message, mapID, x, y)
 end
 
 function THH.PrintStatus()

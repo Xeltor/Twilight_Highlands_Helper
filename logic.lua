@@ -221,6 +221,15 @@ function THH.UpdateWaypointForZone()
   end
 
   local mapID = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
+  if not mapID and C_Map and C_Map.GetFallbackWorldMapID then
+    mapID = C_Map.GetFallbackWorldMapID()
+  end
+  if not mapID then
+    THH.RecordDecision("NO_MAP", "no map ID")
+    SetState("WAITING")
+    CaptureDebug("NO_MAP", "no map ID", { mapID = mapID })
+    return
+  end
   if mapID ~= THH.DEFAULT_MAP_ID then
     THH.RecordDecision("OUT_OF_ZONE", tostring(mapID))
     SetState("OUT_OF_ZONE")
@@ -282,14 +291,15 @@ function THH.UpdateWaypointForZone()
         wx, wy = rare and rare.x, rare and rare.y
       end
       if wx and wy then
-        if THH.MaybeAnnounce and THH.DB and THH.DB.announceActive then
-        THH.MaybeAnnounce(
-          "visible:" .. visibleIndex,
-          ("Active: %s"):format(rare and rare.name or "Unknown"),
-          mapID,
-          wx,
-          wy
-        )
+        if THH.AnnounceEvent then
+          THH.AnnounceEvent(
+            "ACTIVE",
+            "visible:" .. visibleIndex,
+            rare and rare.name or "Unknown",
+            mapID,
+            wx,
+            wy
+          )
         end
         if ShouldSuppressMarker(mapID, wx, wy) then
           THH.RecordDecision("NEAR_TARGET_VISIBLE", tostring(visibleIndex))
@@ -341,10 +351,11 @@ function THH.UpdateWaypointForZone()
       })
       return
     end
-    if THH.MaybeAnnounce and THH.DB and THH.DB.announceActive then
-      THH.MaybeAnnounce(
+    if THH.AnnounceEvent then
+      THH.AnnounceEvent(
+        "ACTIVE",
         "special:" .. (specialRare.npc or specialRare.vignette or "unknown"),
-        ("Active: %s"):format(specialRare.name or "Unknown"),
+        specialRare.name or "Unknown",
         mapID,
         sx,
         sy
@@ -512,27 +523,25 @@ function THH.UpdateWaypointForZone()
     ClearActiveMarker()
     return
   end
-  if THH.MaybeAnnounce and THH.DB then
+  if THH.AnnounceEvent then
     if targetIndex == currentIndex then
-      if THH.DB.announceActive then
-        THH.MaybeAnnounce(
-          "active:" .. targetIndex,
-          ("Active: %s"):format(targetRare.name or "Unknown"),
-          mapID,
-          targetRare.x,
-          targetRare.y
-        )
-      end
+      THH.AnnounceEvent(
+        "ACTIVE",
+        "active:" .. targetIndex,
+        targetRare.name or "Unknown",
+        mapID,
+        targetRare.x,
+        targetRare.y
+      )
     else
-      if THH.DB.announceNext then
-        THH.MaybeAnnounce(
-          "next:" .. targetIndex,
-          ("Next: %s"):format(targetRare.name or "Unknown"),
-          mapID,
-          targetRare.x,
-          targetRare.y
-        )
-      end
+      THH.AnnounceEvent(
+        "NEXT",
+        "next:" .. targetIndex,
+        targetRare.name or "Unknown",
+        mapID,
+        targetRare.x,
+        targetRare.y
+      )
     end
   end
   THH.SetMarkerIfChanged(mapID, targetRare.x, targetRare.y, targetRare.name, stateKey)

@@ -59,9 +59,6 @@ local function GetVignetteXY(vignetteGUID, mapID)
   if type(pos) == "table" and pos.GetXY then
     return pos:GetXY()
   end
-  if type(pos) == "number" then
-    return pos, yOrFacing
-  end
   return nil
 end
 

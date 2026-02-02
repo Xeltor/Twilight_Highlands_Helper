@@ -22,6 +22,7 @@ function THH.SetTomTomWaypoint(mapID, x, y, title)
 end
 
 function THH.SetInGameWaypoint(mapID, x, y)
+  if not mapID then return false end
   if not C_Map or not C_Map.SetUserWaypoint then return false end
   if C_Map.CanSetUserWaypointOnMap and not C_Map.CanSetUserWaypointOnMap(mapID) then
     return false
