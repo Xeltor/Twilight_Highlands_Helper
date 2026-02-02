@@ -13,6 +13,103 @@ end
 
 THH.SendSystemMessage = SendSystemMessage
 
+THH.ANNOUNCE_CHANNELS = {
+  { value = "SELF", text = "System Message" },
+  { value = "PARTY", text = "Party" },
+  { value = "RAID", text = "Raid" },
+}
+
+local function CanSendToChannel(channel)
+  if channel == "PARTY" then
+    return IsInGroup and IsInGroup()
+  end
+  if channel == "RAID" then
+    return IsInRaid and IsInRaid()
+  end
+  return true
+end
+
+local function IsChatLocked()
+  return C_ChatInfo and C_ChatInfo.InChatMessagingLockdown and C_ChatInfo.InChatMessagingLockdown()
+end
+
+function THH.ProcessAnnounceQueue()
+  if THH.IsEnabled and not THH.IsEnabled() then
+    return
+  end
+  local pending = THH.pendingAnnounce
+  if not pending then return end
+  if pending.expiresAt and GetTime and GetTime() > pending.expiresAt then
+    THH.pendingAnnounce = nil
+    return
+  end
+  if IsChatLocked() then
+    return
+  end
+  THH.pendingAnnounce = nil
+  THH.Announce(pending.message, pending.channel)
+end
+
+function THH.Announce(message, forcedChannel)
+  if not message or message == "" then return end
+  message = ("[THH] %s"):format(message)
+  local channel = forcedChannel or (THH.DB and THH.DB.announceChannel) or "SELF"
+  if not channel or channel == "" or channel == "SELF" then
+    SendSystemMessage(message)
+    return
+  end
+  if channel == "RAID" and (not (IsInRaid and IsInRaid())) and (IsInGroup and IsInGroup()) then
+    channel = "PARTY"
+  end
+  if not CanSendToChannel(channel) then
+    return
+  end
+  if IsChatLocked() then
+    THH.pendingAnnounce = {
+      message = message,
+      channel = channel,
+      expiresAt = GetTime and (GetTime() + 10) or nil,
+    }
+    return
+  end
+  if C_ChatInfo and C_ChatInfo.SendChatMessage then
+    C_ChatInfo.SendChatMessage(message, channel)
+  elseif SendChatMessage then
+    SendChatMessage(message, channel)
+  end
+end
+
+local function GetMapPinLinkText()
+  if MAP_PIN_HYPERLINK and MAP_PIN_HYPERLINK ~= "" then
+    return MAP_PIN_HYPERLINK
+  end
+  return "Map Pin"
+end
+
+function THH.FormatMapPinLink(mapID, x, y)
+  if not mapID or not x or not y then return nil end
+  local xCoord = math.floor((x * 10000) + 0.5)
+  local yCoord = math.floor((y * 10000) + 0.5)
+  if xCoord < 0 or yCoord < 0 then return nil end
+  local linkText = GetMapPinLinkText()
+  return ("|cffffff00|Hworldmap:%d:%d:%d|h[%s]|h|r"):format(mapID, xCoord, yCoord, linkText)
+end
+
+function THH.MaybeAnnounce(key, message, mapID, x, y)
+  if not THH.DB or not key or not message then return end
+  if THH.DB.lastAnnounceKey == key then
+    return
+  end
+  THH.DB.lastAnnounceKey = key
+  if THH.DB.announceIncludePin then
+    local link = THH.FormatMapPinLink(mapID, x, y)
+    if link then
+      message = message .. " " .. link
+    end
+  end
+  THH.Announce(message)
+end
+
 function THH.PrintStatus()
   local enabled = THH.IsEnabled and THH.IsEnabled()
   local stateLabel = enabled and "enabled" or "disabled"

@@ -2,14 +2,16 @@
 ## Title: Twilight Highlands Helper
 ## Notes: Adds TomTom or in-game waypoints for Twilight Highlands.
 ## Author: Xeltor
-## Version: v1.0.9
+## Version: v1.1.0
 ## OptionalDeps: TomTom
 ## IconTexture: Interface\AddOns\Twilight_Highlands_Helper\logo
 ## X-Curse-Project-ID: 1447566
+## SavedVariables: THHDB
 
 core.lua
 data.lua
 db.lua
+options.lua
 waypoints.lua
 vignettes.lua
 logic.lua

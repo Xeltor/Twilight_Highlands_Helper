@@ -161,6 +161,9 @@ function THH.SetMarkerIfChanged(mapID, x, y, title, key)
 end
 
 function THH.UpdateWaypointForZone()
+  if THH.ProcessAnnounceQueue then
+    THH.ProcessAnnounceQueue()
+  end
   if THH.IsEnabled and not THH.IsEnabled() then
     THH.lastDebug = {
       reason = "DISABLED",
@@ -279,6 +282,15 @@ function THH.UpdateWaypointForZone()
         wx, wy = rare and rare.x, rare and rare.y
       end
       if wx and wy then
+        if THH.MaybeAnnounce and THH.DB and THH.DB.announceActive then
+        THH.MaybeAnnounce(
+          "visible:" .. visibleIndex,
+          ("Active: %s"):format(rare and rare.name or "Unknown"),
+          mapID,
+          wx,
+          wy
+        )
+        end
         if ShouldSuppressMarker(mapID, wx, wy) then
           THH.RecordDecision("NEAR_TARGET_VISIBLE", tostring(visibleIndex))
           SetState("NEAR_TARGET", tostring(visibleIndex))
@@ -328,6 +340,15 @@ function THH.UpdateWaypointForZone()
         targetY = sy,
       })
       return
+    end
+    if THH.MaybeAnnounce and THH.DB and THH.DB.announceActive then
+      THH.MaybeAnnounce(
+        "special:" .. (specialRare.npc or specialRare.vignette or "unknown"),
+        ("Active: %s"):format(specialRare.name or "Unknown"),
+        mapID,
+        sx,
+        sy
+      )
     end
     if sx and sy then
       THH.SetMarkerIfChanged(mapID, sx, sy, specialRare.name, "special:" .. (specialRare.npc or specialRare.vignette or "unknown"))
@@ -490,6 +511,29 @@ function THH.UpdateWaypointForZone()
     })
     ClearActiveMarker()
     return
+  end
+  if THH.MaybeAnnounce and THH.DB then
+    if targetIndex == currentIndex then
+      if THH.DB.announceActive then
+        THH.MaybeAnnounce(
+          "active:" .. targetIndex,
+          ("Active: %s"):format(targetRare.name or "Unknown"),
+          mapID,
+          targetRare.x,
+          targetRare.y
+        )
+      end
+    else
+      if THH.DB.announceNext then
+        THH.MaybeAnnounce(
+          "next:" .. targetIndex,
+          ("Next: %s"):format(targetRare.name or "Unknown"),
+          mapID,
+          targetRare.x,
+          targetRare.y
+        )
+      end
+    end
   end
   THH.SetMarkerIfChanged(mapID, targetRare.x, targetRare.y, targetRare.name, stateKey)
   local decision = (targetIndex == currentIndex) and "SET_CURRENT" or "SET_NEXT"

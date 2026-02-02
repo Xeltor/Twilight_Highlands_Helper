@@ -12,6 +12,7 @@ function THH.SetTomTomWaypoint(mapID, x, y, title)
   end
   local waypoint = TomTom:AddWaypoint(mapID, x, y, {
     title = title or "Twilight Highlands",
+    source = "Twilight Highlands Helper",
     persistent = false,
     minimap = true,
     world = true,

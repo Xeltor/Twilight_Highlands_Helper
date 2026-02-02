@@ -6,9 +6,22 @@ THH.SPECIAL_BY_NPC = {}
 THH.SPECIAL_BY_VIGNETTE = {}
 
 function THH.InitDB()
-  THH.DB = THH.DB or {}
+  THHDB = THHDB or {}
+  THH.DB = THHDB
   if THH.DB.enabled == nil then
     THH.DB.enabled = true
+  end
+  if THH.DB.announceChannel == nil then
+    THH.DB.announceChannel = "SELF"
+  end
+  if THH.DB.announceNext == nil then
+    THH.DB.announceNext = false
+  end
+  if THH.DB.announceActive == nil then
+    THH.DB.announceActive = false
+  end
+  if THH.DB.announceIncludePin == nil then
+    THH.DB.announceIncludePin = false
   end
   THH.currentState = THH.DB.currentState
   -- Force a fresh marker set after reload; keep saved values in DB only.
