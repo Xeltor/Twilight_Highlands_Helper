@@ -17,6 +17,7 @@ THH.ANNOUNCE_CHANNELS = {
   { value = "SELF", text = "System Message" },
   { value = "PARTY", text = "Party" },
   { value = "RAID", text = "Raid" },
+  { value = "INSTANCE_CHAT", text = "Instance" },
 }
 
 local function CanSendToChannel(channel)
@@ -25,6 +26,9 @@ local function CanSendToChannel(channel)
   end
   if channel == "RAID" then
     return IsInRaid and IsInRaid()
+  end
+  if channel == "INSTANCE_CHAT" then
+    return IsInGroup and IsInGroup(LE_PARTY_CATEGORY_INSTANCE)
   end
   return true
 end
@@ -62,6 +66,13 @@ function THH.Announce(message, forcedChannel)
   if not channel or channel == "" or channel == "SELF" then
     SendSystemMessage(message)
     return
+  end
+  if channel == "INSTANCE_CHAT" and (not (IsInGroup and IsInGroup(LE_PARTY_CATEGORY_INSTANCE))) then
+    if IsInRaid and IsInRaid() then
+      channel = "RAID"
+    elseif IsInGroup and IsInGroup() then
+      channel = "PARTY"
+    end
   end
   if channel == "RAID" and (not (IsInRaid and IsInRaid())) and (IsInGroup and IsInGroup()) then
     channel = "PARTY"
@@ -211,7 +222,7 @@ function THH.PrintDebug()
       SendSystemMessage(("LastDetection: idx=%s source=%s dead=%s time=%s"):format(
         NumText(lastDet.index),
         lastDet.source or "n/a",
-        BoolText(lastDet.dead),
+        BoolText(lastDet.isDead),
         lastDet.time or TimeText(lastDet.serverTime)
       ))
     end

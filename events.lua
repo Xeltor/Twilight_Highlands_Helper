@@ -1,52 +1,82 @@
 local _, THH = ...
 
 THH.InitDB()
-if C_Timer and C_Timer.After then
-  C_Timer.After(1.0, function()
-    THH.UpdateWaypointForZone()
-  end)
-  C_Timer.After(3.0, function()
-    THH.UpdateWaypointForZone()
-  end)
+
+local function IsInTargetZone()
+  local mapID = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
+  return mapID == THH.DEFAULT_MAP_ID
 end
-
-local retryTicker
-local function StartRetryWindow()
-  if retryTicker then return end
-  if not C_Timer or not C_Timer.NewTicker then return end
-  local startAt = GetTime()
-  retryTicker = C_Timer.NewTicker(1.0, function()
-    THH.UpdateWaypointForZone()
-    if THH.lastMarkerKey then
-      retryTicker:Cancel()
-      retryTicker = nil
-      return
-    end
-    if GetTime() - startAt > 15 then
-      retryTicker:Cancel()
-      retryTicker = nil
-    end
-  end)
-end
-
-StartRetryWindow()
-
-local ticker = C_Timer.NewTicker(1.0, function()
-  THH.UpdateWaypointForZone()
-end)
 
 local events = CreateFrame("Frame")
+local useEvents = false
+local tickerActive = false
+local zoneEventsRegistered = false
+
+local ZONE_EVENTS = {
+  "VIGNETTES_UPDATED",
+  "VIGNETTE_MINIMAP_UPDATED",
+  "COMBAT_LOG_EVENT_UNFILTERED",
+}
+
+local function RegisterZoneEvents()
+  if not useEvents or zoneEventsRegistered then return end
+  for _, eventName in ipairs(ZONE_EVENTS) do
+    pcall(events.RegisterEvent, events, eventName)
+  end
+  zoneEventsRegistered = true
+end
+
+local function UnregisterZoneEvents()
+  if not zoneEventsRegistered then return end
+  for _, eventName in ipairs(ZONE_EVENTS) do
+    pcall(events.UnregisterEvent, events, eventName)
+  end
+  zoneEventsRegistered = false
+end
+
+local function TickLoop()
+  if not tickerActive then return end
+  THH.UpdateWaypointForZone()
+  C_Timer.After(1.0, TickLoop)
+end
+
+local function StartTicker()
+  if tickerActive then return end
+  tickerActive = true
+  TickLoop()
+end
+
+local function StopTicker()
+  tickerActive = false
+end
+
+local function OnZoneCheck()
+  if IsInTargetZone() then
+    if useEvents then
+      RegisterZoneEvents()
+    else
+      StartTicker()
+    end
+    THH.UpdateWaypointForZone()
+  else
+    if useEvents then
+      UnregisterZoneEvents()
+    else
+      StopTicker()
+    end
+    THH.UpdateWaypointForZone()
+  end
+end
 
 local function OnEvent(_, event)
   if event == "PLAYER_LOGIN" then
     THH.InitDB()
-    THH.UpdateWaypointForZone()
-    StartRetryWindow()
+    OnZoneCheck()
     return
   end
 
   if event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then
-    THH.UpdateWaypointForZone()
+    OnZoneCheck()
     return
   end
 
@@ -71,6 +101,12 @@ local function OnEvent(_, event)
   end
 end
 
+local GLOBAL_EVENTS = {
+  "PLAYER_LOGIN",
+  "PLAYER_ENTERING_WORLD",
+  "ZONE_CHANGED_NEW_AREA",
+}
+
 local function RegisterEvents()
   if events.isRegistered then return end
   if not (THH.DB and THH.DB.allowEvents) then
@@ -83,17 +119,9 @@ local function RegisterEvents()
     C_Timer.After(1, RegisterEvents)
     return
   end
-  local eventsToRegister = {
-    "PLAYER_LOGIN",
-    "PLAYER_ENTERING_WORLD",
-    "ZONE_CHANGED_NEW_AREA",
-    "VIGNETTES_UPDATED",
-    "VIGNETTE_MINIMAP_UPDATED",
-    "COMBAT_LOG_EVENT_UNFILTERED",
-  }
 
   local registeredCount = 0
-  for _, eventName in ipairs(eventsToRegister) do
+  for _, eventName in ipairs(GLOBAL_EVENTS) do
     local ok, registered = pcall(events.RegisterEvent, events, eventName)
     if ok and registered ~= false then
       registeredCount = registeredCount + 1
@@ -106,11 +134,21 @@ local function RegisterEvents()
   end
 
   events.isRegistered = true
+  useEvents = true
 
-  if ticker then
-    ticker:Cancel()
-    ticker = nil
+  if IsInTargetZone() then
+    RegisterZoneEvents()
   end
 end
 
 RegisterEvents()
+
+-- If event registration failed, use ticker as fallback (only when in zone)
+if not useEvents and IsInTargetZone() then
+  StartTicker()
+end
+
+-- Initial update for players already in the zone on load
+if C_Timer and C_Timer.After then
+  C_Timer.After(1.0, OnZoneCheck)
+end

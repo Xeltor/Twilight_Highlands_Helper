@@ -1,9 +1,5 @@
 local _, THH = ...
 
-local function RecordWaypoint(_, _)
-  return
-end
-
 function THH.SetTomTomWaypoint(mapID, x, y, title)
   if not TomTom or not TomTom.AddWaypoint then return nil end
   if THH.lastTomTomWaypoint and TomTom.RemoveWaypoint then
@@ -57,15 +53,12 @@ function THH.SetWaypoint(mapID, x, y, title)
   local markerTitle = title and ("THH: " .. title) or "THH: Twilight Highlands"
   local usedTomTom = THH.SetTomTomWaypoint(mapID, x, y, markerTitle)
   if usedTomTom then
-    RecordWaypoint("tomtom", markerTitle)
     return true
   end
 
   if THH.SetInGameWaypoint(mapID, x, y) then
-    RecordWaypoint("ingame", markerTitle)
     return true
   end
 
-  RecordWaypoint("failed", "no TomTom / cannot set user waypoint")
   return false
 end

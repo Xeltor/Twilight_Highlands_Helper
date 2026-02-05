@@ -82,7 +82,7 @@ function THH.RecordDetection(index, source, isDead)
   THH.DB.lastDetection = {
     index = index,
     source = source,
-    dead = isDead and true or false,
+    isDead = isDead and true or false,
     serverTime = nowServer,
     time = date("%Y-%m-%d %H:%M:%S"),
   }
